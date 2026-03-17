@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Plus, Undo, Redo, Menu, Search } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Plus, Undo, Redo, Menu, Search, Sparkles, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { Note } from '@/lib/types';
@@ -10,7 +10,15 @@ export default function Header() {
     searchQuery, setSearchQuery, isSearchFocused, setIsSearchFocused,
     worldRef, gridRef
   } = useAppContext();
-  const { undo, redo, addNote, switchFolder, saveToStorage } = useActions();
+  const { undo, redo, addNote, switchFolder, saveToStorage, brainstormNewNotes } = useActions();
+  const [isBrainstorming, setIsBrainstorming] = useState(false);
+
+  const handleBrainstorm = async () => {
+    if (isBrainstorming) return;
+    setIsBrainstorming(true);
+    await brainstormNewNotes();
+    setIsBrainstorming(false);
+  };
 
   const updateTransform = useCallback(() => {
     if (worldRef.current) {
@@ -130,6 +138,15 @@ export default function Header() {
         <div className="text-xs font-mono font-medium text-slate-400 w-12 text-right">
           {Math.round(stateRef.current.view.zoom * 100)}%
         </div>
+        <button
+          onClick={handleBrainstorm}
+          disabled={isBrainstorming}
+          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+          title="AI Brainstorm Ideas"
+        >
+          {isBrainstorming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          Brainstorm
+        </button>
         <button
           onClick={addNote}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 transform active:scale-95"

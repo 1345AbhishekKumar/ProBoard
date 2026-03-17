@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { AppState } from './types';
+import { loadStateFromDb, syncStateToDb } from './db';
 
 type AppContextType = {
   stateRef: React.MutableRefObject<AppState>;
@@ -29,11 +30,12 @@ type AppContextType = {
   setIsSearchFocused: React.Dispatch<React.SetStateAction<boolean>>;
   changesCountRef: React.MutableRefObject<number>;
   lastSaveTimeRef: React.MutableRefObject<number>;
+  userId: string;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export const AppProvider = ({ children }: { children: React.ReactNode }) => {
+export const AppProvider = ({ children, userId }: { children: React.ReactNode, userId: string }) => {
   const [isMounted, setIsMounted] = useState(false);
   const [, setTick] = useState(0);
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -71,36 +73,60 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const lastSaveTimeRef = useRef(0);
 
   useEffect(() => {
-    lastSaveTimeRef.current = Date.now();
-    const data = localStorage.getItem('corkboard_pro_data');
-    if (data) {
-      try {
-        const parsed = JSON.parse(data);
-        stateRef.current.folders = parsed.folders || ['General'];
-        stateRef.current.currentFolder = parsed.currentFolder || 'General';
-        stateRef.current.notes = parsed.notes || { 'General': [] };
-        stateRef.current.trash = parsed.trash || [];
-        stateRef.current.view = parsed.view || { x: 0, y: 0, zoom: 1 };
-        if (!stateRef.current.notes[stateRef.current.currentFolder]) {
-          stateRef.current.currentFolder = stateRef.current.folders[0] || 'General';
+    let isSubscribed = true;
+
+    const initData = async () => {
+      const data = await loadStateFromDb(userId);
+      if (isSubscribed) {
+        if (data) {
+          stateRef.current.folders = data.folders || ['General'];
+          stateRef.current.currentFolder = data.currentFolder || 'General';
+          stateRef.current.notes = data.notes || { 'General': [] };
+          stateRef.current.trash = data.trash || [];
+          stateRef.current.view = data.view || { x: 0, y: 0, zoom: 1 };
+          if (!stateRef.current.notes[stateRef.current.currentFolder]) {
+            stateRef.current.currentFolder = stateRef.current.folders[0] || 'General';
+          }
+        } else {
+          // Fallback to local storage for migration
+          const localData = localStorage.getItem('corkboard_pro_data');
+          if (localData) {
+            try {
+              const parsed = JSON.parse(localData);
+              stateRef.current.folders = parsed.folders || ['General'];
+              stateRef.current.currentFolder = parsed.currentFolder || 'General';
+              stateRef.current.notes = parsed.notes || { 'General': [] };
+              stateRef.current.trash = parsed.trash || [];
+              stateRef.current.view = parsed.view || { x: 0, y: 0, zoom: 1 };
+              if (!stateRef.current.notes[stateRef.current.currentFolder]) {
+                stateRef.current.currentFolder = stateRef.current.folders[0] || 'General';
+              }
+              // Force initial sync to migrate data to DB
+              syncStateToDb(userId, stateRef.current);
+            } catch (e) {
+              console.error("Local save corrupt", e);
+            }
+          }
         }
-      } catch (e) {
-        console.error("Save Corrupt", e);
+        lastSaveTimeRef.current = Date.now();
+        setIsMounted(true);
+        forceUpdate();
       }
-    }
-    setIsMounted(true);
-    forceUpdate();
+    };
+
+    initData();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [userId, forceUpdate]);
+
+  useEffect(() => {
+    if (!isMounted) return;
 
     const saveToStorage = () => {
       if (changesCountRef.current > 0) {
-        const packet = {
-          folders: stateRef.current.folders,
-          notes: stateRef.current.notes,
-          trash: stateRef.current.trash,
-          view: stateRef.current.view,
-          currentFolder: stateRef.current.currentFolder,
-        };
-        localStorage.setItem('corkboard_pro_data', JSON.stringify(packet));
+        syncStateToDb(userId, stateRef.current);
         changesCountRef.current = 0;
         lastSaveTimeRef.current = Date.now();
       }
@@ -108,7 +134,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
     const intervalId = setInterval(() => {
       saveToStorage();
-    }, 30000);
+    }, 10000); // Sync every 10 seconds if there are changes
 
     const handleBeforeUnload = () => {
       saveToStorage();
@@ -121,14 +147,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       saveToStorage();
     };
-  }, [forceUpdate]);
+  }, [isMounted, userId]);
 
   return (
     <AppContext.Provider value={{
       stateRef, forceUpdate, isMounted, historyRef, historyPtrRef, isDraggingRef, dragModeRef, dragStartRef, lastMouseRef, resizeTargetRef,
       worldRef, gridRef, selectRectRef, minimapCanvasRef, minimapViewportRef, contextMenuRef,
       isSidebarOpen, setIsSidebarOpen, isTrashOpen, setIsTrashOpen, searchQuery, setSearchQuery, isSearchFocused, setIsSearchFocused,
-      changesCountRef, lastSaveTimeRef
+      changesCountRef, lastSaveTimeRef, userId
     }}>
       {children}
     </AppContext.Provider>

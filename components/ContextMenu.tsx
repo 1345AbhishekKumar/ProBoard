@@ -1,37 +1,18 @@
 import React from 'react';
-import { Copy, ArrowDownToLine, ArrowUpToLine, Trash2 } from 'lucide-react';
+import { Copy, ArrowDownToLine, ArrowUpToLine, Trash2, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { COLORS, Note } from '@/lib/types';
 
 export default function ContextMenu() {
   const { stateRef, forceUpdate, contextMenuRef } = useAppContext();
-  const { pushState, deleteSelection } = useActions();
+  const { pushState, deleteSelection, duplicateSelection, improveSelection } = useActions();
 
   const setColor = (color: string) => {
     stateRef.current.selection.forEach(id => {
       const n = stateRef.current.notes[stateRef.current.currentFolder]?.find(x => x.id === id);
       if (n) n.color = color;
     });
-    if (contextMenuRef.current) contextMenuRef.current.style.display = 'none';
-    forceUpdate();
-    pushState();
-  };
-
-  const duplicateSelection = () => {
-    const toAdd: Note[] = [];
-    stateRef.current.selection.forEach(id => {
-      const n = stateRef.current.notes[stateRef.current.currentFolder]?.find(x => x.id === id);
-      if (n) {
-        const copy = JSON.parse(JSON.stringify(n));
-        copy.id = 'n_' + Date.now() + Math.random();
-        copy.x += 20;
-        copy.y += 20;
-        copy.z = Date.now();
-        toAdd.push(copy);
-      }
-    });
-    stateRef.current.notes[stateRef.current.currentFolder]?.push(...toAdd);
     if (contextMenuRef.current) contextMenuRef.current.style.display = 'none';
     forceUpdate();
     pushState();
@@ -70,6 +51,13 @@ export default function ContextMenu() {
             title={name}
           />
         ))}
+      </div>
+      <div className="h-px bg-slate-100 my-1.5" />
+      <div
+        onClick={improveSelection}
+        className="px-3 py-2 text-sm font-medium text-indigo-600 cursor-pointer rounded-lg flex items-center gap-2.5 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+      >
+        <Sparkles className="w-4 h-4 text-indigo-400" /> AI Improve
       </div>
       <div className="h-px bg-slate-100 my-1.5" />
       <div

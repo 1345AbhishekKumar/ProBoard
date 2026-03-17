@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Folder, Trash, Check, X } from 'lucide-react';
+import { Plus, Trash2, Folder, Trash, Check, X, LogOut } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
+import { supabase } from '@/lib/supabase';
 
 export default function Sidebar() {
   const { stateRef, isSidebarOpen, setIsTrashOpen } = useAppContext();
@@ -12,6 +13,10 @@ export default function Sidebar() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   useEffect(() => {
     if (isCreating && inputRef.current) {
@@ -153,7 +158,14 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+      <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
         <div className="flex items-center justify-between text-xs font-medium text-slate-400">
           <span className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>

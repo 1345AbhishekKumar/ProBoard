@@ -1,27 +1,22 @@
 import { useCallback } from 'react';
 import { useAppContext } from '@/lib/AppContext';
 import { Note } from '@/lib/types';
+import { syncStateToDb } from '@/lib/db';
+import { improveText, brainstormIdeas } from '@/lib/gemini';
 
 export const useActions = () => {
-  const { stateRef, forceUpdate, historyRef, historyPtrRef, contextMenuRef, changesCountRef, lastSaveTimeRef } = useAppContext();
+  const { stateRef, forceUpdate, historyRef, historyPtrRef, contextMenuRef, changesCountRef, lastSaveTimeRef, userId } = useAppContext();
 
   const forceSaveToStorage = useCallback(() => {
-    const packet = {
-      folders: stateRef.current.folders,
-      notes: stateRef.current.notes,
-      trash: stateRef.current.trash,
-      view: stateRef.current.view,
-      currentFolder: stateRef.current.currentFolder,
-    };
-    localStorage.setItem('corkboard_pro_data', JSON.stringify(packet));
+    syncStateToDb(userId, stateRef.current);
     changesCountRef.current = 0;
     lastSaveTimeRef.current = Date.now();
-  }, [stateRef, changesCountRef, lastSaveTimeRef]);
+  }, [stateRef, changesCountRef, lastSaveTimeRef, userId]);
 
   const saveToStorage = useCallback(() => {
     changesCountRef.current += 1;
     const now = Date.now();
-    if (changesCountRef.current >= 10 || now - lastSaveTimeRef.current > 30000) {
+    if (changesCountRef.current >= 10 || now - lastSaveTimeRef.current > 10000) {
       forceSaveToStorage();
     }
   }, [changesCountRef, lastSaveTimeRef, forceSaveToStorage]);
@@ -140,5 +135,98 @@ export const useActions = () => {
     }
   }, [contextMenuRef, forceUpdate, pushState, stateRef]);
 
-  return { saveToStorage, forceSaveToStorage, pushState, undo, redo, addNote, createFolder, deleteFolder, switchFolder, deleteSelection };
+  const duplicateSelection = useCallback(() => {
+    if (stateRef.current.selection.size === 0) return;
+    pushState();
+    
+    const currentList = stateRef.current.notes[stateRef.current.currentFolder] || [];
+    const newNotes: Note[] = [];
+    const newSelection = new Set<string>();
+    
+    currentList.forEach(n => {
+      if (stateRef.current.selection.has(n.id)) {
+        const newId = 'n_' + Date.now() + Math.random().toString(36).substring(2, 9);
+        newNotes.push({
+          ...n,
+          id: newId,
+          x: n.x + 20,
+          y: n.y + 20,
+          z: Date.now(),
+        });
+        newSelection.add(newId);
+      }
+    });
+    
+    stateRef.current.notes[stateRef.current.currentFolder] = [...currentList, ...newNotes];
+    stateRef.current.selection = newSelection;
+    forceUpdate();
+    pushState();
+    
+    if (contextMenuRef.current) {
+      contextMenuRef.current.style.display = 'none';
+    }
+  }, [contextMenuRef, forceUpdate, pushState, stateRef]);
+
+  const improveSelection = useCallback(async () => {
+    if (stateRef.current.selection.size === 0) return;
+    
+    if (contextMenuRef.current) {
+      contextMenuRef.current.style.display = 'none';
+    }
+
+    const folder = stateRef.current.currentFolder;
+    const selectedIds = Array.from(stateRef.current.selection);
+    
+    let hasChanges = false;
+    for (const id of selectedIds) {
+      const note = stateRef.current.notes[folder]?.find(n => n.id === id);
+      if (note && note.content) {
+        const improved = await improveText(note.content);
+        if (improved !== note.content) {
+          note.content = improved;
+          hasChanges = true;
+          forceUpdate();
+        }
+      }
+    }
+    
+    if (hasChanges) {
+      pushState();
+    }
+  }, [contextMenuRef, forceUpdate, pushState, stateRef]);
+
+  const brainstormNewNotes = useCallback(async () => {
+    const folder = stateRef.current.currentFolder;
+    const currentNotes = stateRef.current.notes[folder] || [];
+    
+    if (currentNotes.length === 0) return;
+    
+    const contextTexts = currentNotes.map(n => n.content).filter(Boolean);
+    if (contextTexts.length === 0) return;
+
+    const newIdeas = await brainstormIdeas(contextTexts);
+    if (newIdeas.length === 0) return;
+
+    pushState();
+    
+    const cx = (-stateRef.current.view.x + window.innerWidth / 2) / stateRef.current.view.zoom - 120;
+    const cy = (-stateRef.current.view.y + window.innerHeight / 2) / stateRef.current.view.zoom - 120;
+    
+    const newNotes: Note[] = newIdeas.map((idea, index) => ({
+      id: 'n_' + Date.now() + Math.random().toString(36).substring(2, 9),
+      x: cx + (index * 40),
+      y: cy + (index * 40),
+      w: 240,
+      h: 240,
+      content: idea,
+      color: 'blue',
+      z: Date.now() + index,
+    }));
+    
+    stateRef.current.notes[folder] = [...currentNotes, ...newNotes];
+    forceUpdate();
+    pushState();
+  }, [forceUpdate, pushState, stateRef]);
+
+  return { saveToStorage, forceSaveToStorage, pushState, undo, redo, addNote, createFolder, deleteFolder, switchFolder, deleteSelection, duplicateSelection, improveSelection, brainstormNewNotes };
 };
