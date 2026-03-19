@@ -49,6 +49,15 @@ export const useCanvasEvents = () => {
     if (noteEl && e.button === 0) {
       const id = noteEl.dataset.id;
       if (id) {
+        const clickedNote = stateRef.current.notes[stateRef.current.currentFolder]?.find(x => x.id === id);
+        if (clickedNote?.isPinned) {
+          if (!e.shiftKey) {
+            stateRef.current.selection.clear();
+            forceUpdate();
+          }
+          return; // Prevent selection and dragging for pinned notes on left click
+        }
+
         if (e.shiftKey) {
           if (stateRef.current.selection.has(id)) stateRef.current.selection.delete(id);
           else stateRef.current.selection.add(id);

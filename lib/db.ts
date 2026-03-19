@@ -33,6 +33,17 @@ export async function loadStateFromDb(userId: string): Promise<Partial<AppState>
     }
 
     if (!settingsData && (!foldersData || foldersData.length === 0) && (!notesData || notesData.length === 0)) {
+      // Try to load from local storage if DB is empty
+      try {
+        const localBackup = localStorage.getItem('corkboard_local_backup');
+        if (localBackup) {
+          const parsed = JSON.parse(localBackup);
+          lastSyncedState = localBackup;
+          return parsed;
+        }
+      } catch (e) {
+        console.warn('Failed to load from local storage', e);
+      }
       return null; // No data found, will use default state
     }
 
@@ -62,6 +73,11 @@ export async function loadStateFromDb(userId: string): Promise<Partial<AppState>
           content: row.content || '',
           color: row.color || 'yellow',
           z: row.z || 0,
+          isPinned: row.is_pinned || false,
+          tags: row.tags || [],
+          summary: row.summary || undefined,
+          tasks: row.tasks || [],
+          suggestions: row.suggestions || undefined,
         };
         
         if (row.is_trashed) {
@@ -77,23 +93,44 @@ export async function loadStateFromDb(userId: string): Promise<Partial<AppState>
       });
     }
 
-    const state = { folders, currentFolder, notes, trash, view };
+    const state = { 
+      folders, currentFolder, notes, trash, view,
+      tags: settingsData?.tags || [],
+      viewMode: settingsData?.view_mode || 'canvas',
+      sortBy: settingsData?.sort_by || 'manual',
+      activeFilters: settingsData?.active_filters || { color: 'all', tags: [], date: 'all' }
+    };
     lastSyncedState = JSON.stringify({
       folders: state.folders,
       currentFolder: state.currentFolder,
       notes: state.notes,
       trash: state.trash,
       view: state.view,
+      tags: state.tags,
+      viewMode: state.viewMode,
+      sortBy: state.sortBy,
+      activeFilters: state.activeFilters,
     });
     
     return state;
   } catch (error) {
     console.error('Error loading state from DB:', error);
+    // Try to load from local storage if DB fails
+    try {
+      const localBackup = localStorage.getItem('corkboard_local_backup');
+      if (localBackup) {
+        const parsed = JSON.parse(localBackup);
+        lastSyncedState = localBackup;
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load from local storage', e);
+    }
     return null;
   }
 }
 
-export async function syncStateToDb(userId: string, currentState: AppState) {
+export async function syncStateToDb(userId: string, currentState: AppState): Promise<boolean> {
   try {
     const currentJson = JSON.stringify({
       folders: currentState.folders,
@@ -101,21 +138,44 @@ export async function syncStateToDb(userId: string, currentState: AppState) {
       notes: currentState.notes,
       trash: currentState.trash,
       view: currentState.view,
+      tags: currentState.tags,
+      viewMode: currentState.viewMode,
+      sortBy: currentState.sortBy,
+      activeFilters: currentState.activeFilters,
     });
 
-    if (currentJson === lastSyncedState) return;
+    // Save to local storage as backup
+    try {
+      localStorage.setItem('corkboard_local_backup', currentJson);
+      localStorage.setItem('corkboard_local_backup_time', Date.now().toString());
+    } catch (e) {
+      console.warn('Failed to save to local storage', e);
+    }
+
+    if (currentJson === lastSyncedState) return true;
 
     const prev = lastSyncedState ? JSON.parse(lastSyncedState) : null;
     lastSyncedState = currentJson;
 
     // 1. Sync User Settings
-    if (!prev || prev.currentFolder !== currentState.currentFolder || JSON.stringify(prev.view) !== JSON.stringify(currentState.view)) {
+    if (!prev || 
+        prev.currentFolder !== currentState.currentFolder || 
+        JSON.stringify(prev.view) !== JSON.stringify(currentState.view) ||
+        JSON.stringify(prev.tags) !== JSON.stringify(currentState.tags) ||
+        prev.viewMode !== currentState.viewMode ||
+        prev.sortBy !== currentState.sortBy ||
+        JSON.stringify(prev.activeFilters) !== JSON.stringify(currentState.activeFilters)
+    ) {
       await supabase.from('user_settings').upsert({
         user_id: userId,
         current_folder: currentState.currentFolder,
         view_x: currentState.view.x,
         view_y: currentState.view.y,
         view_zoom: currentState.view.zoom,
+        tags: currentState.tags,
+        view_mode: currentState.viewMode,
+        sort_by: currentState.sortBy,
+        active_filters: currentState.activeFilters,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
     }
@@ -176,6 +236,11 @@ export async function syncStateToDb(userId: string, currentState: AppState) {
           content: note.content,
           color: note.color,
           z: note.z,
+          is_pinned: note.isPinned || false,
+          tags: note.tags || [],
+          summary: note.summary || null,
+          tasks: note.tasks || [],
+          suggestions: note.suggestions || null,
           is_trashed: note.is_trashed,
           trashed_at: note.trashed_at || null,
           updated_at: new Date().toISOString(),
@@ -195,9 +260,11 @@ export async function syncStateToDb(userId: string, currentState: AppState) {
     if (notesToDelete.length > 0) {
       await supabase.from('notes').delete().eq('user_id', userId).in('id', notesToDelete);
     }
+    return true;
   } catch (error) {
     console.error('Error syncing state to DB:', error);
     // Revert lastSyncedState so it tries again next time
     lastSyncedState = '';
+    return false;
   }
 }

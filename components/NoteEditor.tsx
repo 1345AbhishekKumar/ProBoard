@@ -43,7 +43,7 @@ export default function NoteEditor({ content, color, onChange, onColorChange, on
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base focus:outline-none w-full h-full font-hand text-lg leading-relaxed text-slate-700',
+        class: 'prose prose-sm sm:prose-base focus:outline-none w-full h-full font-sans text-[15px] leading-relaxed text-slate-800',
       },
       handleClick: (view, pos, event) => {
         const { schema, doc, tr } = view.state;
@@ -76,6 +76,7 @@ export default function NoteEditor({ content, color, onChange, onColorChange, on
                 
                 stateRef.current.selection.clear();
                 stateRef.current.selection.add(note.id);
+                stateRef.current.viewMode = 'canvas';
                 
                 forceUpdate();
                 return true;
@@ -176,7 +177,7 @@ export default function NoteEditor({ content, color, onChange, onColorChange, on
             </button>
             
             {showLinkMenu && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-[60]">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white border border-slate-200/60 rounded-xl shadow-xl overflow-hidden z-[60]">
                 <div className="p-2 border-b border-slate-100">
                   <input
                     type="text"
@@ -184,7 +185,7 @@ export default function NoteEditor({ content, color, onChange, onColorChange, on
                     placeholder="Search notes to link..."
                     value={linkSearch}
                     onChange={(e) => setLinkSearch(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-slate-800"
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
                         setShowLinkMenu(false);
@@ -215,13 +216,13 @@ export default function NoteEditor({ content, color, onChange, onColorChange, on
           </div>
         </BubbleMenu>
       )}
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto p-5 custom-scrollbar pb-8" />
-      <div className="absolute bottom-2 left-2 flex gap-1.5 z-10" onPointerDown={(e) => e.stopPropagation()}>
+      <EditorContent editor={editor} className="flex-1 overflow-y-auto p-5 custom-scrollbar pb-10" />
+      <div className="absolute bottom-3 left-3 flex gap-1.5 z-10" onPointerDown={(e) => e.stopPropagation()}>
         {Object.entries(COLORS).map(([key, value]) => (
           <button
             key={key}
             onClick={() => onColorChange(key)}
-            className={`w-4 h-4 rounded-full border hover:scale-110 transition-transform ${color === key ? 'ring-2 ring-blue-500 ring-offset-1' : 'border-black/10'}`}
+            className={`w-4 h-4 rounded-full border hover:scale-110 transition-transform ${color === key ? 'ring-2 ring-slate-400 ring-offset-1 border-transparent' : 'border-black/5 shadow-sm'}`}
             style={{ backgroundColor: value.bg }}
             title={key}
           />

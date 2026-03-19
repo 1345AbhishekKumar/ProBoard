@@ -31,6 +31,8 @@ type AppContextType = {
   changesCountRef: React.MutableRefObject<number>;
   lastSaveTimeRef: React.MutableRefObject<number>;
   userId: string;
+  syncStatus: 'saved' | 'saving' | 'error' | 'offline';
+  setSyncStatus: React.Dispatch<React.SetStateAction<'saved' | 'saving' | 'error' | 'offline'>>;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -44,9 +46,14 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
     folders: ['General'],
     currentFolder: 'General',
     notes: { 'General': [] },
+    templates: [],
     trash: [],
     selection: new Set<string>(),
     view: { x: 0, y: 0, zoom: 1 },
+    tags: [],
+    viewMode: 'canvas',
+    sortBy: 'manual',
+    activeFilters: { color: 'all', tags: [], date: 'all' },
   });
 
   const historyRef = useRef<string[]>([]);
@@ -68,6 +75,7 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'saved' | 'saving' | 'error' | 'offline'>('saved');
 
   const changesCountRef = useRef(0);
   const lastSaveTimeRef = useRef(0);
@@ -124,9 +132,15 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
   useEffect(() => {
     if (!isMounted) return;
 
-    const saveToStorage = () => {
+    const saveToStorage = async () => {
       if (changesCountRef.current > 0) {
-        syncStateToDb(userId, stateRef.current);
+        setSyncStatus('saving');
+        const success = await syncStateToDb(userId, stateRef.current);
+        if (success) {
+          setSyncStatus('saved');
+        } else {
+          setSyncStatus('offline');
+        }
         changesCountRef.current = 0;
         lastSaveTimeRef.current = Date.now();
       }
@@ -154,7 +168,7 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
       stateRef, forceUpdate, isMounted, historyRef, historyPtrRef, isDraggingRef, dragModeRef, dragStartRef, lastMouseRef, resizeTargetRef,
       worldRef, gridRef, selectRectRef, minimapCanvasRef, minimapViewportRef, contextMenuRef,
       isSidebarOpen, setIsSidebarOpen, isTrashOpen, setIsTrashOpen, searchQuery, setSearchQuery, isSearchFocused, setIsSearchFocused,
-      changesCountRef, lastSaveTimeRef, userId
+      changesCountRef, lastSaveTimeRef, userId, syncStatus, setSyncStatus
     }}>
       {children}
     </AppContext.Provider>

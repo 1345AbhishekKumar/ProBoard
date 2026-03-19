@@ -5,7 +5,7 @@ export default function Minimap() {
   const { minimapCanvasRef, minimapViewportRef } = useAppContext();
 
   return (
-    <div className="absolute bottom-6 right-6 w-[220px] h-[150px] bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl overflow-hidden shadow-lg z-40 hover:scale-105 transition-transform origin-bottom-right">
+    <div className="absolute bottom-6 right-6 w-[220px] h-[150px] bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-xl overflow-hidden shadow-sm z-40 hover:scale-105 transition-transform origin-bottom-right">
       <canvas ref={minimapCanvasRef} width={220} height={150} className="w-full h-full" />
       <div
         ref={minimapViewportRef}

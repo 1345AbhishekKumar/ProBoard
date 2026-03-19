@@ -28,7 +28,7 @@ export const useCanvasMouseEvents = (updateTransform: () => void) => {
         
         stateRef.current.selection.forEach(id => {
           const n = stateRef.current.notes[stateRef.current.currentFolder]?.find(x => x.id === id);
-          if (n) {
+          if (n && !n.isPinned) {
             n.x += wdx;
             n.y += wdy;
             const el = document.getElementById(`note-${id}`);

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Folder, Trash, Check, X, LogOut } from 'lucide-react';
+import { Plus, Trash2, Folder, Trash, Check, X, LogOut, Loader2, CloudOff, CloudLightning, Cloud } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { supabase } from '@/lib/supabase';
 
 export default function Sidebar() {
-  const { stateRef, isSidebarOpen, setIsTrashOpen } = useAppContext();
+  const { stateRef, isSidebarOpen, setIsTrashOpen, syncStatus } = useAppContext();
   const { switchFolder, deleteFolder, createFolder } = useActions();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -41,21 +41,56 @@ export default function Sidebar() {
     }
   };
 
+  const renderSyncStatus = () => {
+    switch (syncStatus) {
+      case 'saving':
+        return (
+          <span className="flex items-center gap-1.5 text-blue-500">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Saving...
+          </span>
+        );
+      case 'saved':
+        return (
+          <span className="flex items-center gap-1.5 text-emerald-500">
+            <Cloud className="w-3 h-3" />
+            Saved
+          </span>
+        );
+      case 'offline':
+        return (
+          <span className="flex items-center gap-1.5 text-amber-500">
+            <CloudOff className="w-3 h-3" />
+            Offline
+          </span>
+        );
+      case 'error':
+        return (
+          <span className="flex items-center gap-1.5 text-red-500">
+            <CloudLightning className="w-3 h-3" />
+            Error
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <aside
-      className={`bg-white border-r border-slate-200 flex flex-col z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out ${
+      className={`bg-slate-50 border-r border-slate-200 flex flex-col z-50 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out ${
         isSidebarOpen ? 'w-[260px] ml-0' : 'w-[260px] -ml-[260px]'
       }`}
     >
-      <div className="h-16 flex items-center px-6 border-b border-slate-100 flex-shrink-0">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-sm flex items-center justify-center text-white font-bold text-lg mr-3">
+      <div className="h-16 flex items-center px-6 border-b border-slate-200/60 flex-shrink-0 bg-white">
+        <div className="w-8 h-8 bg-slate-900 rounded-lg shadow-sm flex items-center justify-center text-white font-bold text-lg mr-3">
           P
         </div>
-        <span className="font-bold text-slate-800 text-lg tracking-tight">ProBoard</span>
+        <span className="font-bold text-slate-900 text-lg tracking-tight">ProBoard</span>
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
-        <div className="px-6 py-3 text-[0.7rem] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="px-6 py-3 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
           Workspaces
         </div>
         <div>
@@ -67,12 +102,12 @@ export default function Sidebar() {
                 }}
                 className={`group flex items-center justify-between px-3 py-2.5 mx-3 my-1 rounded-lg cursor-pointer text-sm font-medium transition-all ${
                   f === stateRef.current.currentFolder
-                    ? 'bg-blue-50 text-blue-600 shadow-[0_1px_2px_rgba(59,130,246,0.05)]'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
+                    : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3 truncate">
-                  <Folder className={`w-4 h-4 ${f === stateRef.current.currentFolder ? 'text-blue-500' : 'text-slate-400'}`} />
+                  <Folder className={`w-4 h-4 ${f === stateRef.current.currentFolder ? 'text-slate-800' : 'text-slate-400'}`} />
                   <span className="truncate">{f}</span>
                 </div>
                 {stateRef.current.folders.length > 1 && folderToDelete !== f && (
@@ -87,18 +122,18 @@ export default function Sidebar() {
               </div>
               
               {folderToDelete === f && (
-                <div className="mx-3 my-1 p-3 bg-red-50 rounded-lg border border-red-100">
+                <div className="mx-3 my-1 p-3 bg-red-50 rounded-lg border border-red-100 shadow-sm">
                   <p className="text-xs text-red-600 font-medium mb-2">Delete &quot;{f}&quot;?</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => { deleteFolder(f); setFolderToDelete(null); }}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs py-1.5 rounded transition-colors"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-1.5 rounded transition-colors shadow-sm"
                     >
                       Delete
                     </button>
                     <button
                       onClick={() => setFolderToDelete(null)}
-                      className="flex-1 bg-white hover:bg-slate-100 text-slate-600 text-xs py-1.5 rounded border border-slate-200 transition-colors"
+                      className="flex-1 bg-white hover:bg-slate-50 text-slate-600 text-xs py-1.5 rounded border border-slate-200 transition-colors shadow-sm"
                     >
                       Cancel
                     </button>
@@ -111,7 +146,7 @@ export default function Sidebar() {
 
         <div className="px-5 mt-3">
           {isCreating ? (
-            <div className="flex items-center gap-2 px-3 py-2 mx-0 my-1 rounded-lg border border-blue-300 bg-blue-50">
+            <div className="flex items-center gap-2 px-3 py-2 mx-0 my-1 rounded-lg border border-slate-300 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50 transition-all">
               <input
                 ref={inputRef}
                 type="text"
@@ -119,19 +154,19 @@ export default function Sidebar() {
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Board name..."
-                className="flex-1 bg-transparent text-sm text-slate-700 focus:outline-none min-w-0"
+                className="flex-1 bg-transparent text-sm text-slate-900 focus:outline-none min-w-0 placeholder:text-slate-400"
               />
-              <button onClick={handleCreateSubmit} className="text-blue-600 hover:text-blue-700">
+              <button onClick={handleCreateSubmit} className="text-blue-600 hover:text-blue-700 transition-colors">
                 <Check className="w-4 h-4" />
               </button>
-              <button onClick={() => { setIsCreating(false); setNewFolderName(''); }} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => { setIsCreating(false); setNewFolderName(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setIsCreating(true)}
-              className="flex items-center gap-2 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 font-semibold px-3 py-2 rounded-lg transition-all w-full border border-dashed border-slate-300 hover:border-blue-300"
+              className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 font-semibold px-3 py-2 rounded-lg transition-all w-full border border-dashed border-slate-300 hover:border-slate-400"
             >
               <Plus className="w-3.5 h-3.5" />
               Create New Board
@@ -139,39 +174,36 @@ export default function Sidebar() {
           )}
         </div>
 
-        <div className="px-6 py-3 mt-6 text-[0.7rem] uppercase tracking-widest text-slate-400 font-bold">
+        <div className="px-6 py-3 mt-6 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
           System
         </div>
         <div
           onClick={() => setIsTrashOpen(true)}
-          className="group flex items-center justify-between px-3 py-2.5 mx-3 my-1 rounded-lg cursor-pointer text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all"
+          className="group flex items-center justify-between px-3 py-2.5 mx-3 my-1 rounded-lg cursor-pointer text-sm font-medium text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200/60"
         >
           <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-md bg-slate-100 text-slate-500 group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
+            <div className="p-1.5 rounded-md bg-white border border-slate-200/60 text-slate-500 group-hover:bg-red-50 group-hover:border-red-200 group-hover:text-red-500 transition-colors shadow-sm">
               <Trash className="w-3.5 h-3.5" />
             </div>
             <span className="group-hover:text-red-600 transition-colors">Trash</span>
           </div>
-          <span className="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full group-hover:bg-red-100 group-hover:text-red-600 transition-colors">
+          <span className="text-[10px] font-bold bg-white border border-slate-200/60 text-slate-500 px-2 py-0.5 rounded-full group-hover:bg-red-100 group-hover:text-red-600 group-hover:border-red-200 transition-colors shadow-sm">
             {stateRef.current.trash.length}
           </span>
         </div>
       </div>
 
-      <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
+      <div className="p-4 border-t border-slate-200/60 bg-white space-y-3">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
         >
           <LogOut className="w-4 h-4" />
           Logout
         </button>
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400">
-          <span className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
-            Online
-          </span>
-          <span>v2.4.0</span>
+        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+          {renderSyncStatus()}
+          <span className="font-mono">v2.4.0</span>
         </div>
       </div>
     </aside>

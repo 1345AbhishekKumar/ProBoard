@@ -43,22 +43,22 @@ export default function TrashOverlay() {
   };
 
   return (
-    <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-sm z-30 flex flex-col pt-20 animate-in fade-in duration-200">
+    <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-xl z-30 flex flex-col pt-20 animate-in fade-in duration-200">
       <div className="max-w-4xl mx-auto w-full p-6 flex-1 flex flex-col h-full pb-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Trash Can</h2>
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Trash Can</h2>
             <p className="text-slate-500 mt-1">Manage your deleted thoughts.</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={restoreAllTrash}
-              className="text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+              className="text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm"
             >
               Restore All
             </button>
             {confirmEmpty ? (
-              <div className="flex gap-2 items-center bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+              <div className="flex gap-2 items-center bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 shadow-sm">
                 <span className="text-sm font-medium text-red-600 mr-2">Are you sure?</span>
                 <button
                   onClick={emptyTrash}
@@ -68,7 +68,7 @@ export default function TrashOverlay() {
                 </button>
                 <button
                   onClick={() => setConfirmEmpty(false)}
-                  className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-md font-medium text-sm transition-all"
+                  className="bg-white border border-slate-200/60 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-md font-medium text-sm transition-all shadow-sm"
                 >
                   Cancel
                 </button>
@@ -84,8 +84,8 @@ export default function TrashOverlay() {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 flex-1 overflow-hidden flex flex-col">
-          <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 bg-slate-50/80 text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 flex-1 overflow-hidden flex flex-col">
+          <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-200/60 bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             <div className="col-span-6">Note Content</div>
             <div className="col-span-3">Original Board</div>
             <div className="col-span-3 text-right">Actions</div>
@@ -110,7 +110,7 @@ export default function TrashOverlay() {
                   <div className="col-span-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => restoreTrashItem(idx)}
-                      className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2 py-1 hover:bg-blue-50 rounded transition-colors"
+                      className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-2 py-1 hover:bg-slate-100 rounded transition-colors"
                     >
                       Restore
                     </button>
