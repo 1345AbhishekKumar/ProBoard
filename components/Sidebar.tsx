@@ -1,21 +1,55 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Folder, Trash, Check, X, LogOut, Loader2, CloudOff, CloudLightning, Cloud } from 'lucide-react';
+import { Plus, Trash2, Folder, Trash, Check, X, LogOut, Loader2, CloudOff, CloudLightning, Cloud, DatabaseBackup } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { supabase } from '@/lib/supabase';
 
 export default function Sidebar() {
-  const { stateRef, isSidebarOpen, setIsTrashOpen, syncStatus } = useAppContext();
-  const { switchFolder, deleteFolder, createFolder } = useActions();
+  const { stateRef, isSidebarOpen, setIsTrashOpen, syncStatus, forceUpdate, changesCountRef } = useAppContext();
+  const { switchFolder, deleteFolder, createFolder, saveToStorage } = useActions();
 
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleRestoreBackup = () => {
+    if (window.confirm('Are you sure you want to restore from the local backup? This will overwrite your current unsaved changes.')) {
+      setIsRestoring(true);
+      try {
+        const localBackup = localStorage.getItem('corkboard_local_backup');
+        if (localBackup) {
+          const parsed = JSON.parse(localBackup);
+          stateRef.current.folders = parsed.folders || ['General'];
+          stateRef.current.currentFolder = parsed.currentFolder || 'General';
+          stateRef.current.notes = parsed.notes || { 'General': [] };
+          stateRef.current.trash = parsed.trash || [];
+          stateRef.current.view = parsed.view || { x: 0, y: 0, zoom: 1 };
+          stateRef.current.tags = parsed.tags || [];
+          stateRef.current.viewMode = parsed.viewMode || 'canvas';
+          stateRef.current.sortBy = parsed.sortBy || 'manual';
+          stateRef.current.activeFilters = parsed.activeFilters || { color: 'all', tags: [], date: 'all' };
+          
+          changesCountRef.current++;
+          forceUpdate();
+          saveToStorage();
+          alert('Backup restored successfully!');
+        } else {
+          alert('No local backup found.');
+        }
+      } catch (e) {
+        console.error('Failed to restore backup', e);
+        alert('Failed to restore backup. The backup file might be corrupted.');
+      } finally {
+        setIsRestoring(false);
+      }
+    }
   };
 
   useEffect(() => {
@@ -194,6 +228,14 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-slate-200/60 bg-white space-y-3">
+        <button
+          onClick={handleRestoreBackup}
+          disabled={isRestoring}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100 disabled:opacity-50"
+        >
+          {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseBackup className="w-4 h-4" />}
+          Restore Backup
+        </button>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"

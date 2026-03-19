@@ -3,6 +3,20 @@ import { AppState, Note, TrashItem } from './types';
 
 let lastSyncedState: string = '';
 
+export function updateLastSyncedState(state: AppState) {
+  lastSyncedState = JSON.stringify({
+    folders: state.folders,
+    currentFolder: state.currentFolder,
+    notes: state.notes,
+    trash: state.trash,
+    view: state.view,
+    tags: state.tags,
+    viewMode: state.viewMode,
+    sortBy: state.sortBy,
+    activeFilters: state.activeFilters,
+  });
+}
+
 export async function loadStateFromDb(userId: string): Promise<Partial<AppState> | null> {
   try {
     // Load folders
@@ -128,6 +142,24 @@ export async function loadStateFromDb(userId: string): Promise<Partial<AppState>
     }
     return null;
   }
+}
+
+export async function getNoteVersions(noteId: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return [];
+
+  const { data, error } = await supabase
+    .from('note_versions')
+    .select('*')
+    .eq('note_id', noteId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching note versions:', error);
+    return [];
+  }
+
+  return data;
 }
 
 export async function syncStateToDb(userId: string, currentState: AppState): Promise<boolean> {

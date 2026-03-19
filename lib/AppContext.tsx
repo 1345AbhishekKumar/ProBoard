@@ -28,6 +28,10 @@ type AppContextType = {
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   isSearchFocused: boolean;
   setIsSearchFocused: React.Dispatch<React.SetStateAction<boolean>>;
+  showVersionHistory: boolean;
+  setShowVersionHistory: React.Dispatch<React.SetStateAction<boolean>>;
+  versionHistoryNoteId: string | null;
+  setVersionHistoryNoteId: React.Dispatch<React.SetStateAction<string | null>>;
   changesCountRef: React.MutableRefObject<number>;
   lastSaveTimeRef: React.MutableRefObject<number>;
   userId: string;
@@ -75,6 +79,8 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versionHistoryNoteId, setVersionHistoryNoteId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'saved' | 'saving' | 'error' | 'offline'>('saved');
 
   const changesCountRef = useRef(0);
@@ -168,6 +174,7 @@ export const AppProvider = ({ children, userId }: { children: React.ReactNode, u
       stateRef, forceUpdate, isMounted, historyRef, historyPtrRef, isDraggingRef, dragModeRef, dragStartRef, lastMouseRef, resizeTargetRef,
       worldRef, gridRef, selectRectRef, minimapCanvasRef, minimapViewportRef, contextMenuRef,
       isSidebarOpen, setIsSidebarOpen, isTrashOpen, setIsTrashOpen, searchQuery, setSearchQuery, isSearchFocused, setIsSearchFocused,
+      showVersionHistory, setShowVersionHistory, versionHistoryNoteId, setVersionHistoryNoteId,
       changesCountRef, lastSaveTimeRef, userId, syncStatus, setSyncStatus
     }}>
       {children}

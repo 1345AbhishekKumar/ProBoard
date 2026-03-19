@@ -13,8 +13,14 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import { AlertCircle, Settings, Loader2 } from 'lucide-react';
 
+import VersionHistoryModal from '@/components/VersionHistoryModal';
+import { useSync } from '@/hooks/useSync';
+import { useActions } from '@/hooks/useActions';
+
 function MainApp() {
-  const { isMounted } = useAppContext();
+  const { isMounted, showVersionHistory, setShowVersionHistory, versionHistoryNoteId, stateRef, forceUpdate } = useAppContext();
+  const { saveToStorage } = useActions();
+  useSync();
 
   if (!isMounted) {
     return (
@@ -23,6 +29,10 @@ function MainApp() {
       </div>
     );
   }
+
+  const selectedNote = versionHistoryNoteId 
+    ? stateRef.current.notes[stateRef.current.currentFolder]?.find(n => n.id === versionHistoryNoteId) 
+    : null;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-700 font-sans select-none">
@@ -34,6 +44,21 @@ function MainApp() {
         <Minimap />
       </main>
       <ContextMenu />
+      {showVersionHistory && selectedNote && (
+        <VersionHistoryModal 
+          note={selectedNote} 
+          onClose={() => setShowVersionHistory(false)} 
+          onRestore={(noteId, content) => {
+            const note = stateRef.current.notes[stateRef.current.currentFolder]?.find(n => n.id === noteId);
+            if (note) {
+              note.content = content;
+              note.updatedAt = Date.now();
+              forceUpdate();
+              saveToStorage();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

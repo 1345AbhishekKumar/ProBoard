@@ -1,9 +1,11 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { Plus, Undo, Redo, Menu, Search, Sparkles, Loader2, Filter, ChevronDown, Trash2, BrainCircuit, Mic, MicOff } from 'lucide-react';
+import { Plus, Undo, Redo, Menu, Search, Sparkles, Loader2, Filter, ChevronDown, Trash2, BrainCircuit, Mic, MicOff, Download } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { Note, COLORS } from '@/lib/types';
 import { semanticSearch } from '@/lib/gemini';
+
+import { exportToPDF, exportToMarkdown, exportToPlainText } from '@/lib/exportUtils';
 
 export default function Header() {
   const { 
@@ -19,6 +21,8 @@ export default function Header() {
   const recognitionRef = useRef<any>(null);
   
   const [showFilters, setShowFilters] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const exportContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -92,6 +96,9 @@ export default function Header() {
       }
       if (templatesContainerRef.current && !templatesContainerRef.current.contains(event.target as Node)) {
         setShowTemplates(false);
+      }
+      if (exportContainerRef.current && !exportContainerRef.current.contains(event.target as Node)) {
+        setShowExport(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -435,6 +442,57 @@ export default function Header() {
         <div className="text-xs font-mono font-medium text-slate-400 w-12 text-right">
           {Math.round(stateRef.current.view.zoom * 100)}%
         </div>
+        <div className="relative" ref={exportContainerRef}>
+          <button 
+            onClick={() => setShowExport(!showExport)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200/60 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            title="Export Notes"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          
+          {showExport && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/60 overflow-hidden z-50">
+              <div className="p-2">
+                <button
+                  onClick={() => {
+                    const folderName = stateRef.current.currentFolder;
+                    const notes = stateRef.current.notes[folderName] || [];
+                    exportToPDF(notes, folderName);
+                    setShowExport(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                >
+                  Export as PDF
+                </button>
+                <button
+                  onClick={() => {
+                    const folderName = stateRef.current.currentFolder;
+                    const notes = stateRef.current.notes[folderName] || [];
+                    exportToMarkdown(notes, folderName);
+                    setShowExport(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                >
+                  Export as Markdown
+                </button>
+                <button
+                  onClick={() => {
+                    const folderName = stateRef.current.currentFolder;
+                    const notes = stateRef.current.notes[folderName] || [];
+                    exportToPlainText(notes, folderName);
+                    setShowExport(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                >
+                  Export as Plain Text
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={handleBrainstorm}
           disabled={isBrainstorming}

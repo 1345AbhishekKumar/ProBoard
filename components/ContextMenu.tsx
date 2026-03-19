@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, ArrowDownToLine, ArrowUpToLine, Trash2, Sparkles, BookmarkPlus, Check, Lock, Unlock, Tag as TagIcon, FileText, CheckSquare, FolderSymlink, Lightbulb } from 'lucide-react';
+import { Copy, ArrowDownToLine, ArrowUpToLine, Trash2, Sparkles, BookmarkPlus, Check, Lock, Unlock, Tag as TagIcon, FileText, CheckSquare, FolderSymlink, Lightbulb, Clock } from 'lucide-react';
 import { useAppContext } from '@/lib/AppContext';
 import { useActions } from '@/hooks/useActions';
 import { COLORS, Note, Tag } from '@/lib/types';
 
 export default function ContextMenu() {
-  const { stateRef, forceUpdate, contextMenuRef } = useAppContext();
+  const { stateRef, forceUpdate, contextMenuRef, setShowVersionHistory, setVersionHistoryNoteId } = useAppContext();
   const { pushState, deleteSelection, duplicateSelection, improveSelection, summarizeSelection, extractTasksSelection, getSmartSuggestionsSelection, autoOrganizeSelection, saveAsTemplate } = useActions();
   const [showTemplateInput, setShowTemplateInput] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -175,6 +175,17 @@ export default function ContextMenu() {
       
       {stateRef.current.selection.size === 1 && (
         <>
+          <div
+            onClick={() => {
+              const noteId = Array.from(stateRef.current.selection)[0];
+              setVersionHistoryNoteId(noteId);
+              setShowVersionHistory(true);
+              if (contextMenuRef.current) contextMenuRef.current.style.display = 'none';
+            }}
+            className="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer rounded-lg flex items-center gap-2.5 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Clock className="w-4 h-4 text-slate-400" /> Version History
+          </div>
           {showTemplateInput ? (
             <div className="px-2 py-1.5 flex items-center gap-2">
               <input
